@@ -1,0 +1,3 @@
+java -jar closure-compiler.jar --language_in=ECMASCRIPT_2017 --language_out=ES5_STRICT --module_resolution=NODE --js_output_file ./server/hive.min.js --warning_level QUIET --compilation_level SIMPLE_OPTIMIZATIONS --js='./script/**.js' --js='!./script/Client.js'
+sed -i -e 's/window/global/g' ./server/hive.min.js
+java -jar closure-compiler.jar --language_in=ECMASCRIPT_2017 --language_out=ES5_STRICT --module_resolution=NODE --js_output_file ./client/hive.min.js --warning_level QUIET --compilation_level SIMPLE_OPTIMIZATIONS --js='./script/**.js' --js='!./script/Server.js'
