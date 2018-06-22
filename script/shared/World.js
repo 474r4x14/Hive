@@ -66,9 +66,20 @@ export default class World {
 
     }
 
+    static checkEdges()
+    {
+        var i;
+        for (i = World.edgeTiles.length-1; i > 0; i--) {
+            if (!World.edgeTiles[i].isEdge()) {
+                World.edgeTiles.splice(i,1);
+            }
+        }
+    }
 }
 World.lifeForms = [];
 World.biomes = [];
 World.biomeGrid = [];
 World.tiles = [];
 World.unexploredTiles = [];
+// Tiles next to unexplored areas
+World.edgeTiles = [];

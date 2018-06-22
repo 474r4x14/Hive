@@ -1,5 +1,7 @@
 // import Server from "../Server.js";
 
+import World from "./World";
+
 export default class Tile {
     constructor()
     {
@@ -15,6 +17,33 @@ export default class Tile {
 
     }
 
+    isEdge()
+    {
+        if (
+            this.visible &&
+            (
+                (
+                    World.tiles[this.y-1] !== undefined &&
+                    !World.tiles[this.y-1][this.x].visible
+                ) ||
+                (
+                    World.tiles[this.y+1] !== undefined &&
+                    !World.tiles[this.y+1][this.x].visible
+                ) ||
+                (
+                    World.tiles[this.y][this.x-1] !== undefined &&
+                    !World.tiles[this.y][this.x-1].visible
+                ) ||
+                (
+                    World.tiles[this.y][this.x+1] !== undefined &&
+                    !World.tiles[this.y][this.x+1].visible
+                )
+            )
+        ) {
+            return true;
+        }
+        return false;
+    }
 
     update(){}
 

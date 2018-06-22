@@ -1,3 +1,4 @@
+import DB from "./DB";
 import World from "./World";
 import Hive from "./Hive";
 import Tile from "./Tile";
@@ -5,6 +6,7 @@ import Biome from "./Biome";
 import Utils from "./Utils";
 import Item from "./Item";
 import AStar from "./utils/AStar";
+import AStarNode from "./utils/AStarNode";
 
 export default class LifeForm {
     constructor()
@@ -20,14 +22,19 @@ export default class LifeForm {
         this.sightDistance = 100;
         this.destination = undefined;
         this.path = [];
+        this.speed = 2; // How many pixels per second
+        this.tickOverflow = 0;
         console.log('lifeform?');
 
     }
 
     animate()
     {
-        if (this.destination !== undefined) {
-            // console.log('go to dest: ',this.pixelX,this.pixelY, '|',this.destination.x*Tile.SIZE,this.destination.y*Tile.SIZE);
+        this.tickOverflow++;
+        if (this.destination !== undefined && this.path.length > 0 && this.tickOverflow >= 60/this.speed) {
+            console.log('go to dest: ',this.pixelX,this.pixelY, '|',this.destination.x*Tile.SIZE,this.destination.y*Tile.SIZE);
+            this.pixelX ++;
+            this.tickOverflow = 0;
         }
     }
 
@@ -49,6 +56,11 @@ export default class LifeForm {
 
     static swarmify(lifeform)
     {
+        lifeform.save = function()
+        {
+            DB.update("life",{_id:this._id},this);
+        };
+
         lifeform.setTask = function(action){
             console.log('swarm set task!');
             this.action = action;
@@ -80,34 +92,86 @@ export default class LifeForm {
                     } else {
                         // There's no known food, let's explore!
                         var closest = null, dist = null;
-                        for (i=0; i < World.unexploredTiles.length; i++) {
-                            var tileDist = Utils.dist(this.x,this.y,World.unexploredTiles[i].x,World.unexploredTiles[i].y);
+                        for (i=0; i < World.edgeTiles.length; i++) {
+                            var tileDist = Utils.dist(this.x,this.y,World.edgeTiles[i].x,World.edgeTiles[i].y);
                             if (dist === null || dist > tileDist) {
                                 dist = tileDist;
-                                closest = World.unexploredTiles[i];
+                                closest = World.edgeTiles[i];
                             }
                         }
                         this.destination = closest;
                     }
                 }
                 if (this.destination !== null) {
-                    console.log('got a destination, start pathfinding');
-                    /*
-                    var astar = new AStar(World.tiles[0].length,World.tiles.length);
-                    var x,y;
+                    console.log('got a destination, start pathfinding', this.destination);
+                    console.log('current location', World.tiles[this.y][this.x]);
+
+                    //var astar = new AStar(World.tiles[0].length,World.tiles.length);
+                    var x,y, grid = [];
                     for (y = 0; y < World.tiles.length;y++) {
+                        grid[y] = [];
                         for (x = 0; x < World.tiles[y].length;x++) {
+                            grid[y][x] = new AStarNode(x,y);
                             if (World.tiles[y][x].blocked === true) {
-                                //astar.block(x,y);
+                                grid[y][x].blocked = true;
                             }
                         }
                     }
-                    */
+
+                    for (y = 0; y < grid.length;y++) {
+                        var output = '';
+                        for (x = 0; x < grid[y].length; x++) {
+                            if (grid[y][x].blocked) {
+                                output += '1,';
+                            } else {
+                                output += '0,';
+                            }
+                        }
+                        console.log('block test:',output);
+                    }
+
+                    for (y = 0; y < World.tiles.length;y++) {
+                        var output = '';
+                        for (x = 0; x < World.tiles[y].length;x++) {
+                            /*
+                            if (World.tiles[y][x].isEdge()) {
+                                output += '1,';
+                            } else {
+                                output += '0,';
+                            }
+                            */
+                            var z
+                            var gotOne = false;
+                            for (z =0; z < World.edgeTiles.length; z++) {
+                                if (World.edgeTiles[z] === World.tiles[y][x]) {
+                                    gotOne = true;
+                                    break;
+                                }
+                            }
+
+                            if (gotOne) {
+                                output += '1,';
+                            } else {
+                                output += '0,';
+                            }
 
 
+                        }
+                        console.log(output);
+                    }
                     console.log('lets astar.search this!');
 
-                    var astar = new AStar();
+
+                    var startNode = grid[this.y][this.x];
+                    var endNode = grid[this.destination.y][this.destination.x];
+
+                    var astar = new AStar(grid);
+                    var path = astar.search(startNode,endNode);
+                    if (path.length) {
+                        this.path = path;
+                        this.save();
+                    }
+
 
                     // console.log(astar.);
 
@@ -154,9 +218,20 @@ export default class LifeForm {
                             for (i=0; i < World.unexploredTiles.length; i++) {
                                 if (World.unexploredTiles[i] === World.tiles[y][x]) {
                                     World.unexploredTiles.splice(i,1);
+                                    if (World.tiles[y][x].isEdge()) {
+                                        World.edgeTiles.push(World.tiles[y][x]);
+                                    }
                                     break;
                                 }
                             }
+                            /*
+                            for (i=0; i < World.edgeTiles.length; i++) {
+                                if (World.edgeTiles[i] === World.tiles[y][x] && !World.tiles[y][x].isEdge()) {
+                                    World.edgeTiles.splice(i,1);
+                                    break;
+                                }
+                            }
+                            */
                             World.tiles[y][x].update();
                         }
                         // console.log('tile type:', World.tiles[y][x].type, 'inventory: ',World.tiles[y][x].inventory);
@@ -178,6 +253,7 @@ export default class LifeForm {
                     }
                 }
             }
+            World.checkEdges();
             if (result !== null) {
                 console.log('got a result =)');
                 this.destination = result;
