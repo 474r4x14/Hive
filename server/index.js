@@ -1,15 +1,6 @@
-// import Server from "../src/Server.js";
+
 var Mongo = require("mongodb");
 const WebSocket = require('ws');
-/*
-import WebSocket from "ws";
-
-// import Mongo from "mongodb";
-
-
-// import Swarm from "../shared/Swarm";
-// import World from "../shared/World";
-*/
 const wss = new WebSocket.Server({ port: 8080 });
 console.log('opening ws conn');
 
@@ -26,26 +17,46 @@ wss.on('connection', function connection(ws) {
 
 
 var MongoClient = Mongo.MongoClient;
-// Server.startDB(MongoClient, Server.loadBiomes);
 
 require('./hive.min');
-global.updateDB = function(table,data)
-{
-    console.log('weeeeeeeee UPDATEDB!!!! ',table,data,ttt);
-}
+
 
 // var MongoClient = Mongo.MongoClient;
 var url = "mongodb://hive.defenestrate.me:27017/";
 MongoClient.connect(url, function(err, db) {
     if (err) throw err;
-    Server.DB = db.db("hive");
-    // Server.DB.dropDatabase();
+    var dbo = db.db("hive");
+
+    var createCollection = function(table, callback)
+    {
+        console.log('created????');
+        dbo.createCollection(table,callback);
+    };
+
+    var find = function(table, cols, callback){
+        return dbo.collection(table).find(cols).toArray(callback); //DB['collection']("biomes")['find']({})['toArray'](function(err, result) {
+    };
+
+    var findOne = function(table, cols, query){
+        return dbo.collection(table).findOne(query, cols); // DB['collection']("tiles")['findOne']({x:this.x,y:this.y},{_id:1});
+    };
+
+    var insertOne = function(table, object, callback){
+        return dbo.collection(table).insertOne(object,callback);// DB['collection']("biomes")['insertOne'](biome, function(err, res) {
+    };
+
+    var update = function(table, keys, object){
+        return dbo.collection(table).update(keys,object);
+    };
+
+    var dbMap = {
+        createCollection:createCollection,
+        find: find,
+        findOne: findOne,
+        insertOne: insertOne,
+        update: update
+    };
+
     console.log('DB connected!');
-    // onComplete();
-    // Server.DB =
-    start(MongoClient);
+    start(dbMap);
 });
-
-
-
-
