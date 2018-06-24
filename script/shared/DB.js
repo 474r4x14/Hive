@@ -5,3 +5,6 @@ export default class DB {
     static insertOne(){}
     static update(){}
 }
+DB.COLLECTION_TILES = 'tiles';
+DB.COLLECTION_LIFE = 'life';
+DB.COLLECTION_BIOMES = 'biomes';

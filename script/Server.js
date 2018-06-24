@@ -23,9 +23,9 @@ export default class Server {
     {
 
         console.log('loading the biomes');
-        DB.createCollection("biomes", function(err, res) {
+        DB.createCollection(DB.COLLECTION_BIOMES, function(err, res) {
             console.log("biomes Collection created!");
-            DB.find('biomes',{},function(err, result) {
+            DB.find(DB.COLLECTION_BIOMES,{},function(err, result) {
                 if (err) throw err;
                 // Do any biomes exist?
                 if (result.length > 0) {
@@ -39,7 +39,7 @@ export default class Server {
                     console.log('got a biome?',biome);
                     biome.createTiles();
                     // dbo.collection("biomes").insertOne(biome, function(err, res) {
-                    DB.insertOne("biomes", biome, function(err, res) {
+                    DB.insertOne(DB.COLLECTION_BIOMES, biome, function(err, res) {
                         if (err) throw err;
                         // console.log("Added biome 0,0");
                         // console.log(res.insertedId);
@@ -73,8 +73,8 @@ export default class Server {
             }
 
             // Let's get any tile changes from the DB
-            DB.find("tiles",{biomeId:biome._id},function(err, result) {
-                // console.log('found some tiles in the DB', result);
+            DB.find(DB.COLLECTION_TILES,{biomeId:biome._id},function(err, result) {
+                console.log('found some tiles in the DB', result);
                 for (i = 0; i < result.length; i++) {
                     var b = result[i];
                     console.log('t:',b);
@@ -87,11 +87,11 @@ export default class Server {
 
     static loadLifeForms()
     {
-        DB.createCollection("life", function(err, res) {
+        DB.createCollection(DB.COLLECTION_LIFE, function(err, res) {
             if (err) throw err;
             // console.log("Life Collection created!");
 
-            DB.find("life",{},function (err, result) {
+            DB.find(DB.COLLECTION_LIFE,{},function (err, result) {
                 if (err) throw err;
                 console.log(result);
                 Server.processLifeForms(result);
@@ -125,7 +125,7 @@ export default class Server {
             lifeForm.startTask();
             // lifeForms.push(lifeForm);
             Hive.lifeForms.push(lifeForm);
-            DB.insertOne("life",lifeForm, function(err, res) {
+            DB.insertOne(DB.COLLECTION_LIFE,lifeForm, function(err, res) {
                 if (err) throw err;
             });
         }
@@ -141,7 +141,7 @@ export default class Server {
     }
     static saveLifeForm(lifeForm)
     {
-        DB.update("life",{_id:lifeForm._id},lifeForm);
+        DB.update(DB.COLLECTION_LIFE,{_id:lifeForm._id},lifeForm);
     }
 
 
@@ -160,13 +160,15 @@ export default class Server {
 
             item.update = function()
             {
-                // console.log('doing tile update');
-                var row = DB.findOne("tiles",{x:this.x,y:this.y},{_id:1});
-
-                if (row) {
-                    DB.update("tile",{_id:this._id},this);
+                console.log('doing tile update');
+                var row = DB.findOne(DB.COLLECTION_TILES,{x:this.x,y:this.y},{_id:1});
+                console.log('got row:',row);
+                if (row !== null && row !== undefined) {
+                    console.log('tile exists, updating');
+                    DB.update(DB.COLLECTION_TILES,{_id:this._id},this);
                 } else {
-                    DB.insertOne("tile", this, function(err, res) {
+                    console.log('tile doesnt exist, inserting');
+                    DB.insertOne(DB.COLLECTION_TILES, this, function(err, res) {
                         if (err) throw err;
                         // console.log("Added tile ",this.x,this.y);
                         // console.log(res.insertedId);

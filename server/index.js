@@ -38,7 +38,10 @@ MongoClient.connect(url, function(err, db) {
     };
 
     var findOne = function(table, cols, query){
-        return dbo.collection(table).findOne(query, cols); // DB['collection']("tiles")['findOne']({x:this.x,y:this.y},{_id:1});
+        var row = dbo.collection(table).findOne(query, function(err, result) {
+            // console.log('fondOne row:',result);
+        }); // DB['collection']("tiles")['findOne']({x:this.x,y:this.y},{_id:1});
+        return row;
     };
 
     var insertOne = function(table, object, callback){

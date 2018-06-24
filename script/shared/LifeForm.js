@@ -58,7 +58,7 @@ export default class LifeForm {
     {
         lifeform.save = function()
         {
-            DB.update("life",{_id:this._id},this);
+            DB.update(DB.COLLECTION_LIFE,{_id:this._id},this);
         };
 
         lifeform.setTask = function(action){
