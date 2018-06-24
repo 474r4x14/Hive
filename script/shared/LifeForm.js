@@ -58,6 +58,7 @@ export default class LifeForm {
                 this.x = this.path[0].x;
                 this.y = this.path[0].y;
                 this.path.splice(0,1);
+                this.save();
                 this.checkLocalArea();
             }
             this.tickOverflow = 0;
