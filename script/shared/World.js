@@ -66,6 +66,35 @@ export default class World {
 
     }
 
+    static populateEdges()
+    {
+        var x, y, z;
+        for (y = 0; y < World.tiles.length; y++) {
+        for (x = 0; x < World.tiles[y].length; x++) {
+            console.log("got world tile");
+            var tile = World.tiles[y][x];
+            if (tile.visible === true && tile.isEdge()) {
+                console.log('found an edge tile');
+                var inEdges = false;
+                for (z = 0; z <World.edgeTiles.length; z++) {
+                    if (World.edgeTiles[z] === tile) {
+                        inEdges = true;
+                        break;
+                    }
+                }
+                if (!inEdges) {
+                    console.log('adding a new edge tile');
+                    World.edgeTiles.push(tile);
+                } else {
+                    console.log('tile is already an edge');
+                }
+            } else {
+                console.log('not an edge tile');
+            }
+        }
+        }
+    }
+
     static checkEdges()
     {
         var i;
@@ -74,6 +103,23 @@ export default class World {
                 World.edgeTiles.splice(i,1);
             }
         }
+    }
+
+    static renderTilesVisible()
+    {
+        var y,x;
+        for (y = 0; y < World.tiles.length;y++) {
+            var output = '';
+            for (x = 0; x < World.tiles[y].length;x++) {
+                if (World.tiles[y][x].visible) {
+                    output += '1,';
+                } else {
+                    output += '0,';
+                }
+            }
+            console.log(output);
+        }
+
     }
 }
 World.lifeForms = [];

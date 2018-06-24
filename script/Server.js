@@ -77,11 +77,12 @@ export default class Server {
                 console.log('found some tiles in the DB', result);
                 for (i = 0; i < result.length; i++) {
                     var b = result[i];
-                    console.log('t:',b);
-                    Utils.populateItem(World.biomeGrid[b.y][b.x],b);
+                    // console.log('t:',b);
+                    Utils.populateItem(World.tiles[b.y][b.x],b);
                 }
             });
         }
+        World.populateEdges();
         Server.loadLifeForms();
     }
 

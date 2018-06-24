@@ -22,7 +22,7 @@ export default class LifeForm {
         this.sightDistance = 100;
         this.destination = undefined;
         this.path = [];
-        this.speed = 2; // How many pixels per second
+        this.speed = 4; // How many pixels per second
         this.tickOverflow = 0;
         console.log('lifeform?');
 
@@ -31,9 +31,35 @@ export default class LifeForm {
     animate()
     {
         this.tickOverflow++;
-        if (this.destination !== undefined && this.path.length > 0 && this.tickOverflow >= 60/this.speed) {
+        if (this.destination !== undefined && this.destination !== null && this.path.length > 0 && this.tickOverflow >= 60/this.speed) {
+            console.log('destination: ',this.destination);
             console.log('go to dest: ',this.pixelX,this.pixelY, '|',this.destination.x*Tile.SIZE,this.destination.y*Tile.SIZE);
-            this.pixelX ++;
+            if (this.path[0].x > this.x) {
+                // console.log('+x');
+                this.pixelX ++;
+            }
+            if (this.path[0].x < this.x) {
+                // console.log('-x');
+                this.pixelX --;
+            }
+            if (this.path[0].y > this.y) {
+                // console.log('+y');
+                this.pixelY ++;
+            }
+            if (this.path[0].y < this.y) {
+                // console.log('-y');
+                this.pixelY --;
+            }
+            if (
+                this.pixelX === this.path[0].x*Tile.SIZE &&
+                this.pixelY === this.path[0].y*Tile.SIZE
+            ) {
+                console.log('WE MADE IT');
+                this.x = this.path[0].x;
+                this.y = this.path[0].y;
+                this.path.splice(0,1);
+                this.checkLocalArea();
+            }
             this.tickOverflow = 0;
         }
     }
@@ -73,7 +99,7 @@ export default class LifeForm {
             console.log('lifeform start action');
             if (this.action === LifeForm.ACTION_GATHER_FOOD) {
                 // if can see food
-                if (!this.checkLocalArea()) {
+                if (!this.checkLocalArea(LifeForm.ACTION_GATHER_FOOD)) {
 
                 // else if any known food
                     var i, dist = null, result = null;
@@ -88,10 +114,17 @@ export default class LifeForm {
                     }
                     // There's some known about food, let's just go there
                     if (result !== null) {
+                        console.log('setting the dest #1',result);
                         this.destination = result;
                     } else {
                         // There's no known food, let's explore!
                         var closest = null, dist = null;
+                        console.log('checjing edge tiles:',World.edgeTiles);
+                        console.log(World.renderTilesVisible());
+                        if (World.edgeTiles.length === 0) {
+                            // Let's get the edge tiles!
+                            World.populateEdges();
+                        }
                         for (i=0; i < World.edgeTiles.length; i++) {
                             var tileDist = Utils.dist(this.x,this.y,World.edgeTiles[i].x,World.edgeTiles[i].y);
                             if (dist === null || dist > tileDist) {
@@ -99,12 +132,14 @@ export default class LifeForm {
                                 closest = World.edgeTiles[i];
                             }
                         }
+                        console.log('setting the dest #2',closest,World.edgeTiles);
                         this.destination = closest;
                     }
                 }
                 if (this.destination !== null) {
                     console.log('got a destination, start pathfinding', this.destination);
                     console.log('current location', World.tiles[this.y][this.x]);
+
 
                     //var astar = new AStar(World.tiles[0].length,World.tiles.length);
                     var x,y, grid = [];
@@ -169,6 +204,7 @@ export default class LifeForm {
                     var path = astar.search(startNode,endNode);
                     if (path.length) {
                         this.path = path;
+                        // console.log(path);
                         this.save();
                     }
 
@@ -196,7 +232,7 @@ export default class LifeForm {
             }
         }
 
-        lifeform.checkLocalArea = function()
+        lifeform.checkLocalArea = function(itemType = 0)
         {
             console.log('checking the local area');
             // console.log(World.tiles);
@@ -211,6 +247,8 @@ export default class LifeForm {
                     // console.log('testing tile',x,y);
                     if (World.tiles[y] !== undefined && World.tiles[y][x] !== undefined) {
                         // console.log('tiles is defined');
+
+                        // The tile isn't visible, let's make it visible
                         if (!World.tiles[y][x].visible) {
                             World.tiles[y][x].visible = true;
                             // remove the tile from the unexplored array
@@ -235,17 +273,20 @@ export default class LifeForm {
                             World.tiles[y][x].update();
                         }
                         // console.log('tile type:', World.tiles[y][x].type, 'inventory: ',World.tiles[y][x].inventory);
-                        if (
-                            World.tiles[y][x].type === Tile.TYPE_APPLE_TREE &&
-                            World.tiles[y][x].inventory.length > 0
-                        ) {
-                            // console.log('we found an apple tree!!!');
-                            var tileDist = Utils.dist(this.x,this.y,World.tiles[y][x].x,World.tiles[y][x].y);
-                            if (dist === null || dist > tileDist) {
-                                dist = tileDist;
-                                result = World.tiles[y][x];
-                            }
 
+                        // We're looking for something! Let's sort it out here
+                        if (itemType !== 0) {
+                            if (
+                                World.tiles[y][x].type === Tile.TYPE_APPLE_TREE &&
+                                World.tiles[y][x].inventory.length > 0
+                            ) {
+                                // console.log('we found an apple tree!!!');
+                                var tileDist = Utils.dist(this.x, this.y, World.tiles[y][x].x, World.tiles[y][x].y);
+                                if (dist === null || dist > tileDist) {
+                                    dist = tileDist;
+                                    result = World.tiles[y][x];
+                                }
+                            }
                         }
                         // console.log('checking tile',World.tiles[y][x]);
                     } else {
@@ -255,7 +296,7 @@ export default class LifeForm {
             }
             World.checkEdges();
             if (result !== null) {
-                console.log('got a result =)');
+                console.log('setting the dest #3',result);
                 this.destination = result;
                 return true;
             } else {
