@@ -37,13 +37,15 @@ export default class Server {
                     // console.log('there are no biomes!');
                     var biome = World.addBiome(0,0);
                     console.log('got a biome?',biome);
-                    biome.createTiles();
+                    biome._id = undefined;
                     // dbo.collection("biomes").insertOne(biome, function(err, res) {
                     DB.insertOne(DB.COLLECTION_BIOMES, biome, function(err, res) {
                         if (err) throw err;
-                        // console.log("Added biome 0,0");
-                        // console.log(res.insertedId);
+                        console.log("Added biome 0,0");
+                        console.log(res.insertedId);
+                        biome._id = res.insertedId;
                         // console.log('insert rand test: ' + biome.rand.random()*10);
+                        biome.createTiles();
                     });
                 }
             });
@@ -56,14 +58,7 @@ export default class Server {
     {
         var i;
         for (i = 0; i < biomes.length; i++) {
-            var biome = new Biome();
-            Utils.populateItem(biome, biomes[i]);
-            biome.setRand();
-            // console.log('rand test '+biome.rand.random()*10);
-            // World.biomes[biome._id] = biome;
-            World.biomes.push(biome);
-            World.addToGrid(biome);
-            biome.createTiles();
+            var biome = Biome.populateFromData(biomes[i]);
             var x,y;
             // Upgrade all the biome's tiles
             for (y=0; y < biome.tiles.length;y++) {
@@ -74,11 +69,12 @@ export default class Server {
 
             // Let's get any tile changes from the DB
             DB.find(DB.COLLECTION_TILES,{biomeId:biome._id},function(err, result) {
-                console.log('found some tiles in the DB', result);
+                // console.log('found some tiles in the DB', result);
                 for (i = 0; i < result.length; i++) {
                     var b = result[i];
                     // console.log('t:',b);
                     Utils.populateItem(World.tiles[b.y][b.x],b);
+                    biome.updatedTiles.push(b);
                 }
             });
         }
@@ -138,7 +134,7 @@ export default class Server {
             Server.saveLifeForm(idle);
         }
         // We've pretty much set up everything, let's start the simulation
-        Server.tick();
+        // Server.tick();
     }
     static saveLifeForm(lifeForm)
     {

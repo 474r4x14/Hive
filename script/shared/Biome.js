@@ -2,11 +2,12 @@ import Tile from "./Tile";
 import SeededRand from "./SeededRand";
 import World from "./World";
 import Item from "./Item";
+import Utils from "./Utils";
 
 export default class Biome {
     constructor(x=null,y=null, seed = null)
     {
-        this._id = undefined;
+        this._id = null;
         this.seed = seed;
         this.heat = null;
         this.moisure = null;
@@ -16,6 +17,7 @@ export default class Biome {
         if (seed !== null) {
             this.setRand();
         }
+        this.updatedTiles = [];
     }
 
 
@@ -97,6 +99,61 @@ export default class Biome {
                 }
                 World.tiles[tile.y][tile.x] = tile;
                 World.unexploredTiles.push(tile);
+            }
+        }
+    }
+
+    draw(ctx)
+    {
+        var y,x;
+        for (y = 0; y < this.tiles.length; y++) {
+            for (x = 0; x < this.tiles[y].length; x++) {
+                this.tiles[y][x].draw(ctx);
+            }
+        }
+    }
+
+    static populateFromData(data)
+    {
+        var biome = new Biome();
+        Utils.populateItem(biome, data);
+        biome.setRand();
+        World.biomes.push(biome);
+        World.addToGrid(biome);
+        biome.createTiles();
+        var i;
+        for (i = 0; i < biome.updatedTiles.length; i++) {
+            var tile = biome.updatedTiles[i];
+            Utils.populateItem(biome.tiles[tile.y][tile.x], tile);
+        }
+        return biome;
+    }
+
+    cloneWithoutTiles()
+    {
+        var biome = new Biome();
+        Utils.populateItem(biome,this);
+        delete biome.tiles;
+        // delete biome.updatedTiles;
+        return biome;
+    }
+
+    static biomeMeta()
+    {
+        var i, biomes = [];
+        for (i = 0; i < World.biomes.length; i++) {
+            var tmp = World.biomes[i].cloneWithoutTiles();
+            biomes.push(tmp);
+        }
+        return biomes;
+    }
+
+    static getById(id)
+    {
+        var i;
+        for (i = 0; i < World.biomes.length; i++) {
+            if ( String(id) === String(World.biomes[i]._id)) {
+                return World.biomes[i];
             }
         }
     }
