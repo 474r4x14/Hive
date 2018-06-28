@@ -82,8 +82,10 @@ export default class Biome {
                             console.log('adding an apple');
                             tile.inventory.push(item);
                         }
+                        break;
                         default:
                         tile.type = Tile.TYPE_OAK_TREE;
+                        break;
                     }
                 }
 
