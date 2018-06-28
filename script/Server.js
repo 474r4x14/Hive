@@ -4,11 +4,17 @@ import Biome from "./shared/Biome";
 import Tile from "./shared/Tile";
 import Hive from "./shared/Hive";
 import LifeForm from "./shared/LifeForm";
+import DB from "./shared/DB";
 
 
 export default class Server {
-    static startDB()
+    static startDB(dbMap)
     {
+        DB.createCollection = dbMap['createCollection'];
+        DB.find = dbMap['find'];
+        DB.findOne = dbMap['findOne'];
+        DB.insertOne = dbMap['insertOne'];
+        DB.update = dbMap['update'];
         Server.loadBiomes();
     }
 
@@ -17,14 +23,12 @@ export default class Server {
     {
 
         console.log('loading the biomes');
-        Server['DB']['createCollection']("biomes", function(err, res) {
-            // console.log("world Collection created!");
-            Server['DB']['collection']("biomes")['find']({})['toArray'](function(err, result) {
+        DB.createCollection(DB.COLLECTION_BIOMES, function(err, res) {
+            console.log("biomes Collection created!");
+            DB.find(DB.COLLECTION_BIOMES,{},function(err, result) {
                 if (err) throw err;
                 // Do any biomes exist?
                 if (result.length > 0) {
-                    // console.log('got biomes', result);
-                    // var i;
                     // Let's populate the arrays
                     Server.processBiomes(result);
 
@@ -33,13 +37,15 @@ export default class Server {
                     // console.log('there are no biomes!');
                     var biome = World.addBiome(0,0);
                     console.log('got a biome?',biome);
-                    biome.createTiles();
+                    biome._id = undefined;
                     // dbo.collection("biomes").insertOne(biome, function(err, res) {
-                    Server['DB']['collection']("biomes")['insertOne'](biome, function(err, res) {
+                    DB.insertOne(DB.COLLECTION_BIOMES, biome, function(err, res) {
                         if (err) throw err;
-                        // console.log("Added biome 0,0");
-                        // console.log(res.insertedId);
+                        console.log("Added biome 0,0");
+                        console.log(res.insertedId);
+                        biome._id = res.insertedId;
                         // console.log('insert rand test: ' + biome.rand.random()*10);
+                        biome.createTiles();
                     });
                 }
             });
@@ -52,14 +58,7 @@ export default class Server {
     {
         var i;
         for (i = 0; i < biomes.length; i++) {
-            var biome = new Biome();
-            Utils.populateItem(biome, biomes[i]);
-            biome.setRand();
-            // console.log('rand test '+biome.rand.random()*10);
-            // World.biomes[biome._id] = biome;
-            World.biomes.push(biome);
-            World.addToGrid(biome);
-            biome.createTiles();
+            var biome = Biome.populateFromData(biomes[i]);
             var x,y;
             // Upgrade all the biome's tiles
             for (y=0; y < biome.tiles.length;y++) {
@@ -69,25 +68,27 @@ export default class Server {
             }
 
             // Let's get any tile changes from the DB
-            Server['DB']['collection']("tiles")['find']({biomeId:biome._id})['toArray'](function(err, result) {
+            DB.find(DB.COLLECTION_TILES,{biomeId:biome._id},function(err, result) {
                 // console.log('found some tiles in the DB', result);
                 for (i = 0; i < result.length; i++) {
                     var b = result[i];
-                    console.log('t:',b);
-                    Utils.populateItem(World.biomeGrid[b.y][b.x],b);
+                    // console.log('t:',b);
+                    Utils.populateItem(World.tiles[b.y][b.x],b);
+                    biome.updatedTiles.push(b);
                 }
             });
         }
+        World.populateEdges();
         Server.loadLifeForms();
     }
 
     static loadLifeForms()
     {
-        Server['DB']['createCollection']("life", function(err, res) {
+        DB.createCollection(DB.COLLECTION_LIFE, function(err, res) {
             if (err) throw err;
             // console.log("Life Collection created!");
 
-            Server['DB']['collection']("life")['find']({})['toArray'](function (err, result) {
+            DB.find(DB.COLLECTION_LIFE,{},function (err, result) {
                 if (err) throw err;
                 console.log(result);
                 Server.processLifeForms(result);
@@ -121,7 +122,7 @@ export default class Server {
             lifeForm.startTask();
             // lifeForms.push(lifeForm);
             Hive.lifeForms.push(lifeForm);
-            Server['DB']['collection']("life")['insertOne'](lifeForm, function(err, res) {
+            DB.insertOne(DB.COLLECTION_LIFE,lifeForm, function(err, res) {
                 if (err) throw err;
             });
         }
@@ -133,11 +134,11 @@ export default class Server {
             Server.saveLifeForm(idle);
         }
         // We've pretty much set up everything, let's start the simulation
-        Server.tick();
+        // Server.tick();
     }
     static saveLifeForm(lifeForm)
     {
-        Server['DB']['collection']("life")['update']({_id:lifeForm._id},lifeForm);
+        DB.update(DB.COLLECTION_LIFE,{_id:lifeForm._id},lifeForm);
     }
 
 
@@ -150,37 +151,21 @@ export default class Server {
         setTimeout(Server.tick,1000/60);
     }
 
-/*
-    static socketConnected(ws)
-    {
-        ws.on('message', function incoming(message) {
-            console.log('received: %s', message);
-        });
-        ws.send('something');
-
-    }
-
-
-    static socketIncoming(data)
-    {
-        console.log('received: %s', data);
-    }
-*/
-
-
     static swarmify(item)
     {
         if (item instanceof Tile) {
 
             item.update = function()
             {
-                // console.log('doing tile update');
-                var row = Server['DB']['collection']("tiles")['findOne']({x:this.x,y:this.y},{_id:1});
-
-                if (row) {
-                    Server['DB']['collection']("tile")['update']({_id:this._id},this);
+                console.log('doing tile update');
+                var row = DB.findOne(DB.COLLECTION_TILES,{x:this.x,y:this.y},{_id:1});
+                console.log('got row:',row);
+                if (row !== null && row !== undefined) {
+                    console.log('tile exists, updating');
+                    DB.update(DB.COLLECTION_TILES,{_id:this._id},this);
                 } else {
-                    Server['DB']['collection']("tile")['insertOne'](this, function(err, res) {
+                    console.log('tile doesnt exist, inserting');
+                    DB.insertOne(DB.COLLECTION_TILES, this, function(err, res) {
                         if (err) throw err;
                         // console.log("Added tile ",this.x,this.y);
                         // console.log(res.insertedId);
@@ -200,4 +185,4 @@ export default class Server {
 // Server.DB;
 // Server.socket;
 window['start'] = Server.startDB;
-window['Server'] = Server;
+// window['Server'] = Server;

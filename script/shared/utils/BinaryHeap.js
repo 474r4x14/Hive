@@ -113,4 +113,12 @@ export default class BinaryHeap {
             n = swap;
         }
     }
+
+    /**
+     * Rescores a Node
+     */
+
+    rescoreElement(node) {
+        return this.sinkDown(this.content.indexOf(node));
+    };
 }
