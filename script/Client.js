@@ -6,6 +6,8 @@
 import Biome from "./shared/Biome";
 import Spriteset from './shared/Spriteset';
 import World from "./shared/World";
+import LifeForm from "./shared/LifeForm";
+import Utils from "./shared/Utils";
 
 const socket = new WebSocket('ws://72.11.130.113:8080');
 
@@ -19,12 +21,19 @@ socket.addEventListener('open', function (event) {
 socket.addEventListener('message', function (event) {
     console.log('Message from server ', event.data);
     var data = JSON.parse(event.data);
+    var i;
     if (data.type === 'biomes') {
-        var i;
         for (i = 0; i < data.data.length; i++) {
             var biome = Biome.populateFromData(data.data[i]);
             World.biomes.push(biome);
         }
+    } else if (data.type === 'lifeforms') {
+        for (i = 0; i < data.data.length; i++) {
+            var lifeform = new LifeForm();
+            Utils.populateItem(lifeform,data.data[i]);
+            World.lifeForms.push(lifeform);
+        }
+
     } else {
         console.log('unknown type ',data.type);
     }
@@ -52,6 +61,9 @@ function redraw()
     var i;
     for (i = 0; i < World.biomes.length; i++) {
         World.biomes[i].draw(ctx);
+    }
+    for (i = 0; i < World.lifeForms.length; i++) {
+        World.lifeForms[i].draw(ctx);
     }
     requestAnimationFrame(redraw);
 }

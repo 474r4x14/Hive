@@ -1,5 +1,5 @@
 import Biome from "./Biome";
-import World from "./World";
+import Hive from "./Hive";
 
 export default class Socket {
 
@@ -9,6 +9,7 @@ export default class Socket {
         console.log('connected!');
         ws.on('message', function(data){Socket.receive(ws,data)});
         ws.send(JSON.stringify({type:'biomes',data:Biome.biomeMeta()}));
+        ws.send(JSON.stringify({type:'lifeforms',data:Hive.lifeForms}));
     }
 
     static send()

@@ -7,6 +7,7 @@ import Utils from "./Utils";
 import Item from "./Item";
 import AStar from "./utils/AStar";
 import AStarNode from "./utils/AStarNode";
+import Spriteset from "./Spriteset";
 
 export default class LifeForm {
     constructor()
@@ -64,6 +65,17 @@ export default class LifeForm {
             this.tickOverflow = 0;
         }
     }
+
+    draw(context) {
+        // console.log('drawing tile');
+        let spriteSize = 32;
+
+        let spriteX = 4%5;
+        // let spriteY = ((0-spriteX)/4);
+        let spriteY = 0;
+        context.drawImage(Spriteset.img, (spriteX)*spriteSize,(spriteY)*spriteSize,spriteSize,spriteSize, this.pixelX, this.pixelY, Tile.SIZE, Tile.SIZE);
+    }
+
 
     static spawn()
     {
