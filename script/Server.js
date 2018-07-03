@@ -5,6 +5,8 @@ import Tile from "./shared/Tile";
 import Hive from "./shared/Hive";
 import LifeForm from "./shared/LifeForm";
 import DB from "./shared/DB";
+import Task from "./shared/Task";
+import Item from "./shared/Item";
 
 
 export default class Server {
@@ -129,6 +131,7 @@ export default class Server {
         var idle = Hive.findIdle();
         if (idle !== null) {
             console.log('found an idle, lets task him up!', idle);
+            Hive.tasks.push(new Task(Task.TYPE_GATHER, Item.TYPE_APPLE));
             idle.setTask(LifeForm.ACTION_GATHER_FOOD);
             idle.startTask();
             Server.saveLifeForm(idle);

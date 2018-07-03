@@ -5,6 +5,7 @@ import Tile from "./Tile";
 import Biome from "./Biome";
 import Utils from "./Utils";
 import Item from "./Item";
+import Task from "./Task";
 import AStar from "./utils/AStar";
 import AStarNode from "./utils/AStarNode";
 import Spriteset from "./Spriteset";
@@ -21,7 +22,7 @@ export default class LifeForm {
         this.health = 100;
         this.hunger = 100;
         this.inventory = [];
-        this.action = LifeForm.ACTION_IDLE;
+        this.task = null;
         this.sightDistance = 100;
         this.destination = undefined;
         this.path = [];
@@ -29,6 +30,27 @@ export default class LifeForm {
         this.tickOverflow = 0;
         console.log('lifeform?');
 
+    }
+
+    get isIdle()
+    {
+        return this.task === null;
+    }
+
+    get taskType()
+    {
+        if (this.task instanceof Task) {
+            return this.task.type;
+        }
+        return null;
+    }
+
+    get taskSubType()
+    {
+        if (this.task instanceof Task) {
+            return this.task.subType;
+        }
+        return null;
     }
 
     animate()
@@ -71,7 +93,7 @@ export default class LifeForm {
             // Are we next to out destination?
             if (this.destination.isNextTo(this.x,this.y)) {
                 // console.log("we're standing RIGHT NEXT TO IT");
-                if (this.action === LifeForm.ACTION_GATHER_FOOD && this.tickOverflow >= 300) {
+                if (this.taskType === Task.TYPE_GATHER && this.taskSubType === Item.TYPE_APPLE && this.tickOverflow >= 300) {
                     if (this.destination.type === Tile.TYPE_APPLE_TREE && this.destination.inventory.length > 0) {
                         console.log("we're scrumping!");
                         this.tickOverflow -= 300;
@@ -137,6 +159,7 @@ export default class LifeForm {
             DB.update(DB.COLLECTION_LIFE,{_id:this._id},this);
         };
 
+        // TODO use the Task class
         lifeform.setTask = function(action){
             console.log('swarm set task!');
             this.action = action;
@@ -150,7 +173,13 @@ export default class LifeForm {
             // Are we carying all we can carry?
             if (this.atCapacity()) {
                 console.log('at weight capacity, we need to deposit our goods');
-            } else if (this.action === LifeForm.ACTION_GATHER_FOOD) {
+                // If there's no available storage let's make ourselves idle
+                if (!Hive.checkStorage()) {
+                    // TODO activate this, needs to save too
+                    // this.action = LifeForm.ACTION_IDLE;
+                    Hive.issueTasks();
+                }
+            } else if (this.taskType === Task.TYPE_GATHER && this.taskSubType === Item.TYPE_APPLE) {
                 // if can see food
                 if (!this.checkLocalArea(LifeForm.ACTION_GATHER_FOOD)) {
                 console.log('cant see any food?')
@@ -378,7 +407,7 @@ export default class LifeForm {
 
     }
 }
-LifeForm.ACTION_IDLE = 0;
-LifeForm.ACTION_GATHER_FOOD = 1;
+// LifeForm.ACTION_IDLE = 0;
+// LifeForm.ACTION_GATHER_FOOD = 1;
 // FIXME this is temporary for testing
 LifeForm.weightCapacity = 1;
