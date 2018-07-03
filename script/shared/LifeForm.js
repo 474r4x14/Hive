@@ -8,6 +8,7 @@ import Item from "./Item";
 import AStar from "./utils/AStar";
 import AStarNode from "./utils/AStarNode";
 import Spriteset from "./Spriteset";
+import Socket from "./Socket";
 
 export default class LifeForm {
     constructor()
@@ -19,6 +20,7 @@ export default class LifeForm {
         this.pixelY = this.y*Tile.SIZE;
         this.health = 100;
         this.hunger = 100;
+        this.inventory = [];
         this.action = LifeForm.ACTION_IDLE;
         this.sightDistance = 100;
         this.destination = undefined;
@@ -31,9 +33,10 @@ export default class LifeForm {
 
     animate()
     {
+        // console.log('animate!');
         this.tickOverflow++;
         if (this.destination !== undefined && this.destination !== null && this.path.length > 0 && this.tickOverflow >= 60/this.speed) {
-            console.log('destination: ',this.destination);
+            // console.log('destination: ',this.destination);
             console.log('go to dest: ',this.pixelX,this.pixelY, '|',this.destination.x*Tile.SIZE,this.destination.y*Tile.SIZE);
             if (this.path[0].x > this.x) {
                 // console.log('+x');
@@ -61,7 +64,31 @@ export default class LifeForm {
                 this.path.splice(0,1);
                 this.save();
                 this.checkLocalArea();
+                Socket.send({type:'lifeform-position', data:{id:this._id,x:this.x,y:this.y}});
             }
+            this.tickOverflow = 0;
+        } else if (this.destination !== undefined && this.destination !== null) {
+            // Are we next to out destination?
+            if (this.destination.isNextTo(this.x,this.y)) {
+                // console.log("we're standing RIGHT NEXT TO IT");
+                if (this.action === LifeForm.ACTION_GATHER_FOOD && this.tickOverflow >= 300) {
+                    if (this.destination.type === Tile.TYPE_APPLE_TREE && this.destination.inventory.length > 0) {
+                        console.log("we're scrumping!");
+                        this.tickOverflow -= 300;
+                        this.inventory.push(this.destination.inventory.pop());
+                        this.save();
+                        this.destination.update();
+                    } else if (this.destination.inventory.length <= 0) {
+                        console.log('no apples left, lets check out load & find another food source');
+                        Socket.send({type:'log',message:'lets look for more apples!'});
+                        this.destination = undefined;
+                        this.startTask();
+                    }
+                }
+            } else {
+                // console.log("Not next to the destination... where am I?");
+            }
+        } else {
             this.tickOverflow = 0;
         }
     }
@@ -92,6 +119,16 @@ export default class LifeForm {
     startTask(){}
     notifySwarm(){console.log('no swarm here');}
 
+    atCapacity()
+    {
+        var capacity = LifeForm.weightCapacity;
+        var i;
+        for (i = 0; i < this.inventory.length; i++) {
+            capacity -= this.inventory[i].weight;
+        }
+        console.log('capacity is ',LifeForm.weightCapacity,' weight is ',capacity);
+        return capacity < LifeForm.weightCapacity;
+    }
 
     static swarmify(lifeform)
     {
@@ -110,10 +147,13 @@ export default class LifeForm {
         lifeform.startTask = function()
         {
             console.log('lifeform start action');
-            if (this.action === LifeForm.ACTION_GATHER_FOOD) {
+            // Are we carying all we can carry?
+            if (this.atCapacity()) {
+                console.log('at weight capacity, we need to deposit our goods');
+            } else if (this.action === LifeForm.ACTION_GATHER_FOOD) {
                 // if can see food
                 if (!this.checkLocalArea(LifeForm.ACTION_GATHER_FOOD)) {
-
+                console.log('cant see any food?')
                 // else if any known food
                     var i, dist = null, result = null;
                     for (i = 0; i < Hive.known.items.length; i++) {
@@ -130,6 +170,7 @@ export default class LifeForm {
                         console.log('setting the dest #1',result);
                         this.destination = result;
                     } else {
+
                         // There's no known food, let's explore!
                         var closest = null, dist = null;
                         console.log('checjing edge tiles:',World.edgeTiles);
@@ -149,7 +190,7 @@ export default class LifeForm {
                         this.destination = closest;
                     }
                 }
-                if (this.destination !== null) {
+                if (this.destination !== null && this.destination !== undefined) {
                     console.log('got a destination, start pathfinding', this.destination);
                     console.log('current location', World.tiles[this.y][this.x]);
 
@@ -160,7 +201,7 @@ export default class LifeForm {
                         grid[y] = [];
                         for (x = 0; x < World.tiles[y].length;x++) {
                             grid[y][x] = new AStarNode(x,y);
-                            if (World.tiles[y][x].blocked === true) {
+                            if (World.tiles[y][x].blocked === true && this.destination.type !== Tile.TYPE_APPLE_TREE) {
                                 grid[y][x].blocked = true;
                             }
                         }
@@ -210,17 +251,28 @@ export default class LifeForm {
                     console.log('lets astar.search this!');
 
 
-                    var startNode = grid[this.y][this.x];
-                    var endNode = grid[this.destination.y][this.destination.x];
+                    if (this.destination !== undefined) {
+                        console.log('I GOT A DESTINATION');
+                        var startNode = grid[this.y][this.x];
+                        var endNode = grid[this.destination.y][this.destination.x];
 
-                    var astar = new AStar(grid);
-                    var path = astar.search(startNode,endNode);
-                    if (path.length) {
-                        this.path = path;
-                        // console.log(path);
-                        this.save();
+                        var astar = new AStar(grid);
+                        var path = astar.search(startNode, endNode);
+                        if (path.length) {
+                            console.log('we got a path!');
+                            // If the destination is usually blocked, let's remove the last
+                            if (this.destination.type === Tile.TYPE_APPLE_TREE) {
+                                path.splice(path.length-1,1);
+                            }
+                            this.path = path;
+                            // console.log(path);
+                            this.save();
+                        } else {
+                            console.log('couldnt find a path =(');
+                        }
+                    } else {
+                            console.log('no destination?');
                     }
-
 
                     // console.log(astar.);
 
@@ -255,9 +307,16 @@ export default class LifeForm {
             // console.log('x',this.x-maxTileDist,'->',this.x+maxTileDist);
             var dist = null;
             var result = null;
-            for (y = this.y-maxTileDist; y < this.y+maxTileDist; y++) {
-                for (x = this.x-maxTileDist; x < this.x+maxTileDist; x++) {
+            for (y = this.y-maxTileDist; y < this.y+maxTileDist+1; y++) {
+                for (x = this.x-maxTileDist; x < this.x+maxTileDist+1; x++) {
                     // console.log('testing tile',x,y);
+
+                    // If the biome doesn't exist, let's create it
+                    var biomeLoc = Tile.getBiomeFromCoords(x,y);
+                    if (World.biomes[biomeLoc.y] === undefined || World.biomes[biomeLoc.y][biomeLoc.x] === undefined) {
+                        World.addBiome(biomeLoc.x,biomeLoc.y);
+                    }
+
                     if (World.tiles[y] !== undefined && World.tiles[y][x] !== undefined) {
                         // console.log('tiles is defined');
 
@@ -302,8 +361,6 @@ export default class LifeForm {
                             }
                         }
                         // console.log('checking tile',World.tiles[y][x]);
-                    } else {
-                        console.log('tile is undefined?');
                     }
                 }
             }
@@ -323,3 +380,5 @@ export default class LifeForm {
 }
 LifeForm.ACTION_IDLE = 0;
 LifeForm.ACTION_GATHER_FOOD = 1;
+// FIXME this is temporary for testing
+LifeForm.weightCapacity = 1;

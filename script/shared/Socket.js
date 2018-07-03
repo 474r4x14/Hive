@@ -10,11 +10,18 @@ export default class Socket {
         ws.on('message', function(data){Socket.receive(ws,data)});
         ws.send(JSON.stringify({type:'biomes',data:Biome.biomeMeta()}));
         ws.send(JSON.stringify({type:'lifeforms',data:Hive.lifeForms}));
+        // Let's add the client to the connections array for reference
+        Socket.connections.push(ws);
     }
 
-    static send()
+    // Sends data to all connected clients
+    static send(data)
     {
-
+        console.log('sending data to socket', data, Socket.connections.length);
+        var i;
+        for (i = 0; i < Socket.connections.length; i++) {
+            Socket.connections[i].send(JSON.stringify(data));
+        }
     }
 
     static receive(ws,data)

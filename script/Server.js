@@ -134,7 +134,7 @@ export default class Server {
             Server.saveLifeForm(idle);
         }
         // We've pretty much set up everything, let's start the simulation
-        // Server.tick();
+        Server.tick();
     }
     static saveLifeForm(lifeForm)
     {

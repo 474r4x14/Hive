@@ -79,7 +79,6 @@ export default class Biome {
                         var quantity = Math.floor(this.rand.random()*6);
                         if (quantity > 0) {
                             var item = new Item(Item.TYPE_APPLE,);
-                            console.log('adding an apple');
                             tile.inventory.push(item);
                         }
                         break;

@@ -1,10 +1,11 @@
 import Biome from "./Biome";
+import DB from "./DB";
 
 export default class World {
 
     static addBiome(x,y)
     {
-
+        console.log('Creating a biome x:'+x+'y:'+y);
         var difference = 50;
         var neighbours = 0;
         var heat = 0;
@@ -51,6 +52,17 @@ export default class World {
         }
         World.addToGrid(biome);
         World.biomes.push(biome);
+        biome._id = undefined;
+        // dbo.collection("biomes").insertOne(biome, function(err, res) {
+        DB.insertOne(DB.COLLECTION_BIOMES, biome, function(err, res) {
+            if (err) throw err;
+            console.log("Added biome 0,0, ",res.insertedId);
+            console.log(res.insertedId);
+            biome._id = res.insertedId;
+            // console.log('insert rand test: ' + biome.rand.random()*10);
+            biome.createTiles();
+        });
+
         return biome;
 
     }
@@ -70,28 +82,28 @@ export default class World {
     {
         var x, y, z;
         for (y = 0; y < World.tiles.length; y++) {
-        for (x = 0; x < World.tiles[y].length; x++) {
-            console.log("got world tile");
-            var tile = World.tiles[y][x];
-            if (tile.visible === true && tile.isEdge()) {
-                console.log('found an edge tile');
-                var inEdges = false;
-                for (z = 0; z <World.edgeTiles.length; z++) {
-                    if (World.edgeTiles[z] === tile) {
-                        inEdges = true;
-                        break;
+            for (x = 0; x < World.tiles[y].length; x++) {
+                // console.log("got world tile");
+                var tile = World.tiles[y][x];
+                if (tile.visible === true && tile.isEdge()) {
+                    // console.log('found an edge tile');
+                    var inEdges = false;
+                    for (z = 0; z <World.edgeTiles.length; z++) {
+                        if (World.edgeTiles[z] === tile) {
+                            inEdges = true;
+                            break;
+                        }
                     }
+                    if (!inEdges) {
+                        // console.log('adding a new edge tile');
+                        World.edgeTiles.push(tile);
+                    // } else {
+                    //     console.log('tile is already an edge');
+                    }
+                // } else {
+                //     console.log('not an edge tile');
                 }
-                if (!inEdges) {
-                    console.log('adding a new edge tile');
-                    World.edgeTiles.push(tile);
-                } else {
-                    console.log('tile is already an edge');
-                }
-            } else {
-                console.log('not an edge tile');
             }
-        }
         }
     }
 

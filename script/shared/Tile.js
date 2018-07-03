@@ -2,6 +2,8 @@
 
 import World from "./World";
 import Spriteset from "./Spriteset";
+import Biome from "./Biome";
+import Point from "./utils/Point";
 
 export default class Tile {
     constructor()
@@ -15,7 +17,6 @@ export default class Tile {
         this.blocked = false;
         this.type = Tile.TYPE_BLANK;
         this.inventory = [];
-
     }
 
     isEdge()
@@ -46,6 +47,17 @@ export default class Tile {
         return false;
     }
 
+    isNextTo(x,y)
+    {
+        if (
+            (y === this.y && (x-1 === this.x || x+1 === this.x)) ||
+            (x === this.x && (y-1 === this.y || y+1 === this.y))
+        ) {
+            return true;
+        }
+        return false;
+    }
+
     draw(context) {
         // console.log('drawing tile');
         let spriteSize = 32;
@@ -56,12 +68,26 @@ export default class Tile {
         context.drawImage(Spriteset.img, (spriteX)*spriteSize,(spriteY)*spriteSize,spriteSize,spriteSize, this.x*Tile.SIZE, this.y*Tile.SIZE, Tile.SIZE, Tile.SIZE);
         if (this.type !== Tile.TYPE_BLANK) {
             spriteX = 2%4;
+            if (this.inventory.length > 0) {
+                spriteX = 3%4;
+            }
             context.drawImage(Spriteset.img, (spriteX)*spriteSize,(spriteY)*spriteSize,spriteSize,spriteSize, this.x*Tile.SIZE, this.y*Tile.SIZE, Tile.SIZE, Tile.SIZE);
         }
+
         if (!this.visible) {
             spriteX = 0%4;
             context.drawImage(Spriteset.img, (spriteX)*spriteSize,(spriteY)*spriteSize,spriteSize,spriteSize, this.x*Tile.SIZE, this.y*Tile.SIZE, Tile.SIZE, Tile.SIZE);
         }
+    }
+
+    static getBiomeFromCoords(x,y)
+    {
+        var bx,by,modX,modY;
+        modX = x%Biome.size;
+        modY = y%Biome.size;
+        bx = (x-modX)/Biome.size;
+        by = (y-modY)/Biome.size;
+        return new Point(bx,by);
     }
 
     update(){}
@@ -71,5 +97,6 @@ export default class Tile {
 Tile.SIZE = 32;
 Tile.TYPE_BLANK = 0;
 // Trees
+// TODO we need to restock the fruit after x amount of time
 Tile.TYPE_APPLE_TREE = 1;
 Tile.TYPE_OAK_TREE = 2;
